@@ -3,13 +3,15 @@
 section .text
 global _start
  _start:               ; ELF entry point
-lea RCX, data3
-lea RAX, data4
-lea RBX, data5
-lea RDX, addition_out
-call addition_modulaire_1024
-lea rax, addition_out
-call print_hex_value_1024
+lea rax, data2
+lea rbx, data2b
+lea rcx, multiplication_out
+mov rdx, 374000
+caracterization_loop:
+    call multiplication_1024
+    dec rdx
+    cmp rdx,0
+    jne caracterization_loop
 ;mov RAX, RCX
 ;call print_hex_value_33Q
 mov rax, 60            ; sys_exit
@@ -103,62 +105,77 @@ multiplication_1024:
     push R10;output result
     push r11; outer loop
     push r12;inner loop
-    push r13; tmp low
+    push r13; tmp val
     push r14; tmp high
-    push r15; addition loop
+    push r15; 
     multiplication_1024_main:
-        mov R8, RAX
-        mov R9, RBX
-        mov R10, RCX
-        multiplication_1024_cleanup_result:
-            mov R11, 33
-            multiplication_1024_cleanup_result_loop:
-                mov qword [R10],0
-                add R10, 8
-                dec R11
-                cmp r11,0
-            jne multiplication_1024_cleanup_result_loop 
-            sub r10,8
-
-        add R8, 120 ; on va multiplier chaque membre de [r8] par l'intégralité des membres de [R9]
-        mov r11, 16; for r11 in range(16)
-        multiplication_1024_outer_loop:
-            add R9, 120
-            mov R12, 16
-            multiplication_1024_inner_loop:
-                mov RAX, [R8]
-                mov RBX, [R9]
-                mul RBX
-                mov R13, RAX
-                mov R14, RDX
-
-                
-                add [r10], r13
-                pushf 
-                sub r10,8
-                popf
-                mov r15,0
-                adc [r10], r14
-                jnc multiplication_1024_add_stop
-                multiplication_1024_add_start:
-                SUB r10,8
-                add r15,8
-                clc
-                add qword [r10],1
-                jc multiplication_1024_add_start
-                multiplication_1024_add_stop:
-                add r10, r15
-                sub R9,8
-                dec R12
-                cmp r12,0
-                ;todo implement this
-            jne multiplication_1024_inner_loop
-            ;todo implement this
-            add r10,120
-            sub R8,8
-            dec R11
+        mov r8, rax
+        mov r9, rbx
+        ;cleans the output
+        mov r10, rcx
+        mov r11, 33
+        multiplication_1024_clean_output_loop:
+            mov qword [r10],0
+            add r10,8
+            dec r11
             cmp r11,0
+        jne multiplication_1024_clean_output_loop
+        
+        sub r11, 8
+        sub r10, 8
+        add r8, 120
+        add r9, 120
+        mov r11, 16
+        multiplication_1024_outer_loop:
+            lea r13,addition_modulaire_1024_tmp
+            add r13, 128
+            mov rbx, [r8]
+            mov rax, [r9]
+            mul rbx
+            mov [r13], rax
+            sub r9, 8
+            sub r13,8
+            mov r12, 15
+            multiplication_1024_inner_loop:
+                mov r14, rdx;r14 is local to this loop
+                mov rax, [r9]
+                mul rbx
+                add r14,rax
+                adc rdx,0
+                mov [r13], r14
+                sub r13,8
+                sub r9,8
+                dec r12
+                cmp r12,0
+            jne multiplication_1024_inner_loop
+            mov [r13], rdx
+            add r13,128
+            ;adds the result to the current data,
+            mov r12,17
+            clc
+            pushf
+            multiplication_1024_addition_loop:
+                mov rax,[r10]
+                mov rbx,[r13]
+                popf
+                adc rax,rbx
+                pushf
+                mov [r10],rax
+                sub r10,8
+                sub r13,8
+                dec r12
+                cmp r12,0
+            jne multiplication_1024_addition_loop
+            mov rax,0
+            popf
+            add r10,128
+            add r9,128
+            sub r8, 8
+        
+        dec r11
+        cmp r11,0
         jne multiplication_1024_outer_loop
+
     pop r15
     pop r14
     pop r13
@@ -629,6 +646,7 @@ spacer: db 10
 section .bss
 addition_out: resq 17
 multiplication_out: resq 33
+multiplication_tmp_result: resq 17
 addition_modulaire_1024_tmp: resq 17
 hex_print_message_1024: resb(259)
 hex_print_message_33Q: resb(531)
