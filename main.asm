@@ -3,21 +3,19 @@
 section .text
 global _start
  _start:               ; ELF entry point
-lea RAX, data2
-lea RBX, data3
-mov r10, 303000
-start_mult_loop:
-lea RCX, multiplication_out
-call multiplication_1024
-dec r10
-cmp r10,0
-jne start_mult_loop
+lea RCX, data3
+lea RAX, data4
+lea RBX, data5
+lea RDX, addition_out
+call addition_modulaire_1024
+lea rax, addition_out
+call print_hex_value_1024
 ;mov RAX, RCX
 ;call print_hex_value_33Q
 mov rax, 60            ; sys_exit
 mov rdi, 0             ; 0
 syscall
-
+;0x00000000004010e6
 ;params : RAX,RBX :  toSum, RCX : mod 16q, RDX: out 16q
 addition_modulaire_1024:
     push RSP
@@ -37,6 +35,7 @@ addition_modulaire_1024:
     push RCX ;pile <= modulo
     lea RCX, addition_modulaire_1024_tmp
     call addition_1024
+    
     mov RAX, RCX;on stocke le résultat dans un registre temporaire pour pouvoir  les comparer
     pop RBX ;pile => modulo
     mov R13, RBX
@@ -44,7 +43,7 @@ addition_modulaire_1024:
     cmp R9,0
     jne addition_modulaire_1024_sub
     mov R11,16
-    inc RAX
+    add RAX,8
     addition_modulaire_1024_compare_loop:
         mov R9, [RAX]
         mov R10, [RBX]
@@ -58,26 +57,27 @@ addition_modulaire_1024:
     jmp addition_modulaire_1024_no_sub
     addition_modulaire_1024_sub:
         lea RAX,addition_modulaire_1024_tmp
-        inc RAX
+        add RAX,8
         mov RBX, R13
         mov RCX, R12
         call substraction_1024
         jmp addition_modulaire_1024_end
     addition_modulaire_1024_no_sub:
         lea RAX, addition_modulaire_1024_tmp
-        inc RAX
+        add RAX,8
         mov RBX, R13
         mov R9,16
         addition_modulaire_1024_no_sub_loop:
             mov R10, [RAX]
             mov [RBX], R10
-            inc RAX
-            inc RBX
+            add RAX,8
+            add RBX,8
             dec R9
             cmp R9,0
         jne addition_modulaire_1024_no_sub_loop
 
     addition_modulaire_1024_end:
+    pop R13
     pop R12
     pop R11
     pop R10
@@ -621,7 +621,10 @@ addition_tmp: dq 0
 data0: dq 0x0000000000000000, 0x1111111111111111, 0x2222222222222222, 0x3333333333333333, 0x4444444444444444, 0x5555555555555555, 0x6666666666666666, 0x7777777777777777, 0x8888888888888888, 0x9999999999999999, 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd, 0xeeeeeeeeeeeeeeee, 0xffffffffffffffff
 data1: dq 0x0000000000000000, 0x1111111111111111, 0x2222222222222222, 0x3333333333333333, 0x4444444444444444, 0x5555555555555555, 0x6666666666666666, 0x7777777777777777, 0x8888888888888888, 0x9999999999999999, 0xaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbb, 0xcccccccccccccccc, 0xdddddddddddddddd, 0xeeeeeeeeeeeeeeee, 0xffffffffffffffff
 data2: dq 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
-data3: dq 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
+data2b: dq 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
+data3: dq 0x0000000000000001, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000
+data4: dq 0x0000000000000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
+data5: dq 0x0000000000000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF
 spacer: db 10
 section .bss
 addition_out: resq 17
