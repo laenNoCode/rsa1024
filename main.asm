@@ -3,26 +3,53 @@
 section .text
 global _start
  _start:               ; ELF entry point
-;mov rax, data2
-; ;push rax
-; mov rax, data3
-; push rax
-; push rax
-; push rax
-; lea rax, data4
-; push rax
-; push rax
-; call multiplication_1024_modulaire
-; pop rax
-; pop rax
-; pop rax
-; pop rax
-; pop rax
-lea rax, data7
-lea rbx, data6
-lea rcx, addition_modulaire_1024_tmp
-call div_r_2048
-lea rax, addition_modulaire_1024_tmp
+; params : rbp+2*8 pointer to base number (16q)
+;params : rbp + 3*8 pointer to power (16q)
+;params : rbp+4*8 : pointer to N (modulus)
+;params : rbp+5*8 : pointer to V
+;params : rpb+6*8 : pointer to R (may be an optionnal argument)
+;params : rpb+7*8 : pointer to return address
+lea rax, cypher_out
+push rax
+lea rax, var_r
+push rax
+lea rax, var_v
+push rax
+lea rax, var_n
+push rax
+lea rax, crypt_c
+push rax
+lea rax, data2
+push rax
+call square_and_multiply_1024
+pop rax
+pop rax
+pop rax
+pop rax
+pop rax
+pop rax
+
+lea rax, decypher_out
+push rax
+lea rax, var_r
+push rax
+lea rax, var_v
+push rax
+lea rax, var_n
+push rax
+lea rax, decrypt_d
+push rax
+lea rax, cypher_out
+push rax
+call square_and_multiply_1024
+pop rax
+pop rax
+pop rax
+pop rax
+pop rax
+pop rax
+
+mov rax, decypher_out
 call print_hex_value_1024
 ;mov RAX, RCX
 ;call print_hex_value_33Q
@@ -50,7 +77,88 @@ square_and_multiply_1024:
     push R13
 
     ;can be optimized further by cancelling the last squares, will be investigated
-    
+    mov rax, [rbp + 2 * 8]
+    lea rbx, square_and_multiply_1024_square
+    call copy_1024
+
+
+    lea rax, square_and_multiply_1024_multiply
+    mov rcx, 15
+    square_and_multiply_1024_init_multiply_loop:
+        mov qword [rax],0x0
+        add rax, 8
+    loop square_and_multiply_1024_init_multiply_loop
+    mov qword [rax], 0x1
+
+    mov r8,[rbp + 3 * 8]
+    add r8, 15*8
+    mov r9, 16
+    square_and_multiply_1024_multiply_blocks_loop:
+        mov r10, 64
+        mov r11,[r8]
+        
+        square_and_multiply_1024_multiply_current_block_loop:
+
+            mov r12, 0x01
+            and r12, r11
+            cmp r12, 0
+            je  square_and_multiply_1024_square_op
+            
+            lea rax, square_and_multiply_1024_tmp_multiply
+            push rax
+            mov rax, [rbp + 6 * 8]
+            push rax
+            mov rax, [rbp + 5 * 8]
+            push rax
+            mov rax, [rbp+4*8]
+            push rax
+            lea rax, square_and_multiply_1024_square;j
+            push rax
+            lea rax, square_and_multiply_1024_multiply;i
+            push rax
+            call multiplication_1024_modulaire
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            lea rax, square_and_multiply_1024_tmp_multiply
+            lea rbx, square_and_multiply_1024_multiply
+            call copy_1024
+            square_and_multiply_1024_square_op:
+            lea rax, square_and_multiply_1024_tmp_square
+            push rax
+            mov rax, [rbp + 6 * 8]
+            push rax
+            mov rax, [rbp + 5 * 8]
+            push rax
+            mov rax, [rbp+4*8]
+            push rax
+            lea rax, square_and_multiply_1024_square;j
+            push rax
+            lea rax, square_and_multiply_1024_square;i
+            push rax
+            call multiplication_1024_modulaire
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            pop rax
+            lea rax, square_and_multiply_1024_tmp_square
+            lea rbx, square_and_multiply_1024_square
+            call copy_1024
+            shr r11,1
+            dec r10
+            cmp r10,0
+        jne square_and_multiply_1024_multiply_current_block_loop
+        sub r8,8
+        dec r9
+        cmp r9,0
+    jne square_and_multiply_1024_multiply_blocks_loop
+    lea rax, square_and_multiply_1024_multiply
+    mov rbx, [rbp + 7 * 8]
 
     pop R13
     pop R12
@@ -75,6 +183,7 @@ multiplication_1024_modulaire:
     push RBX
     push RCX
     push RDX
+    push r8
     push R9
     push R10
     push R11
@@ -88,42 +197,50 @@ multiplication_1024_modulaire:
 
     lea rax, multiplication_1024_modulaire_tmp_S +  17 * 8
     lea rbx, multiplication_1024_modulaire_tmp_S_mod
-    mov r9, 16
-    multiplication_1024_copy_s_loop:
-        mov r10, [rax]
-        mov qword [rbx],8
-        add rax,8
-        add rbx,8
-        dec r9
-        cmp r9,0
-    jne multiplication_1024_copy_s_loop
-
+    call copy_1024
+    
     lea rax, multiplication_1024_modulaire_tmp_S_mod 
     mov rbx, [rbp +6*8];R
     call modulo_R_1024
+
     
+
     lea rax, multiplication_1024_modulaire_tmp_S_mod
     mov rbx, [rbp+5*8];V
     lea rcx, multiplication_1024_modulaire_tmp_T
     call multiplication_1024
+    
+   
 
     lea rax, multiplication_1024_modulaire_tmp_T + 17 * 8
     mov rbx, [rbp +6*8];R
     call modulo_R_1024
-    
+
+     
+
     lea rax,multiplication_1024_modulaire_tmp_T + 17 * 8
     mov rbx,[rbp+4*8]; N
     lea rcx,multiplication_1024_modulaire_tmp_TxN
     call multiplication_1024
+
+
     
+
     lea rax, multiplication_1024_modulaire_tmp_TxN + 8
-    lea rbx, multiplication_1024_modulaire_tmp_S
+    lea rbx, multiplication_1024_modulaire_tmp_S + 8
     lea rcx, multiplication_1024_modulaire_tmp_M
     call addition_2048
-    
+
+
     lea rax, multiplication_1024_modulaire_tmp_M
     mov rbx, [rbp +6*8];R
     lea rcx, multiplication_1024_modulaire_tmp_U
+    call div_r_2048
+
+    push rax
+    lea rax, multiplication_1024_modulaire_tmp_U+8
+    call print_hex_value_1024
+    pop rax
 
     lea rax, multiplication_1024_modulaire_tmp_U
     mov r8,[rax]
@@ -136,6 +253,7 @@ multiplication_1024_modulaire:
     multiplication_1024_modulaire_cmp_loop:
         mov r8,[rax]
         mov r9, [rbx]
+
         cmp r8,r9
         jg  multiplication_1024_modulaire_to_sub
         jl  multiplication_1024_modulaire_not_to_sub
@@ -161,11 +279,14 @@ multiplication_1024_modulaire:
             cmp r8,0
         jne multiplication_1024_modulaire_not_to_sub_copy_loop
     multiplication_1024_modulaire_end:
+
+
     pop R13
     pop R12
     pop R11
     pop R10
     pop R9
+    pop r8
     pop RDX
     pop RCX
     pop RBX
@@ -221,7 +342,6 @@ div_r_2048:
     debug_flag:
     mov cl, r8b
     shr rax, cl
-    sub r11, 8
     div_r_2048_find_fill_loop:
         mov rbx, [r11]
         mov cl, r9b
@@ -1000,12 +1120,21 @@ data5: dq 0x0000000000000000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFF
 data6: dq 0x8000000000000000, 0x0 ,0x0, 0x0, 0x0,0x0 ,0x0, 0x0, 0x0,0x0 ,0x0, 0x0, 0x0,0x0 ,0x0, 0x0
 data7: dq 0x0000000000000000, 0xAAAAAAAAAAAAAAAF, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA
 spacer: db 10
+
+crypt_c:   dq 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x00001c527b7ccc7f
+decrypt_d: dq 0x04c5f5a7d1ac599e, 0x68105c7ab544c5c1, 0x5f2e800c42455a82, 0xaf40d41b44464bc8, 0x7a6c808084cba8fb, 0xbf7d1e09c33ba7cc, 0x45c79dfce8ab6381, 0x87665c5302e22141, 0x461a206b34ddc7a7, 0xf2a3d68a84c0af2f, 0x74f21c3036ea731f, 0xc27c70218c7f4399, 0x77eda3d6237ba626, 0xf9749cfa475d06cb, 0x60066b458f24b7cd, 0xbac956374d1a526f
+var_n:     dq 0x4000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x00000000000001cc, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000015ec7
+var_r:     dq 0x8000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000
+var_v:     dq 0x5b173d778b0e3ccf, 0xa4ccf18241ecdbe0, 0xf108dc374dde4c90, 0x9983f1e5d9100e3c, 0xbd0664103ee262b3, 0xe0869f553670ea50, 0xc57b7bfd00cf7492, 0x0599d582c259819a, 0xc17c0c1f246b4b0a, 0xba442c9ef3283765, 0x9f74554316906d84, 0x4ab9b80d1d1d869e, 0x3f9fd90be8681c93, 0x979a7154c64a80cb, 0x405e53e066cfc8c3, 0x3f11890c0b6ffd09
 section .bss
+
+cypher_out: resq 16
+decypher_out: resq 16
 square_and_multiply_1024_tmp_multiply: resq 16
 square_and_multiply_1024_multiply: resq 16
 square_and_multiply_1024_tmp_square: resq 16
 square_and_multiply_1024_square: resq 16
-
+square_and_multiply_1024_tmp_multiplication_left: resq 16
 
 multiplication_1024_modulaire_tmp_S: resq(33)
 multiplication_1024_modulaire_tmp_S_mod: resq(16)
