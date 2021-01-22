@@ -2,7 +2,11 @@
 a NASM implementation of RSA1024
 
 how to use:
-apt install nasm
-apt install ld
-make
-./main.asm
+
+`apt install nasm`
+
+`apt install ld`
+
+`make`
+
+`./main`
